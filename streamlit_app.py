@@ -2,8 +2,61 @@ import streamlit as st
 import replicate
 import os
 
+# Apply dark theme using custom CSS
+st.markdown(
+    """
+    <style>
+    body {
+        background-color: #1E1E1E;
+        color: #FFFFFF;
+    }
+    .st-bw {
+        background-color: #333333 !important;
+        color: #FFFFFF !important;
+    }
+    .st-bu {
+        background-color: #444444 !important;
+        color: #FFFFFF !important;
+    }
+    .st-cb {
+        background-color: #444444 !important;
+        color: #FFFFFF !important;
+    }
+    .st-ei {
+        background-color: #333333 !important;
+        color: #FFFFFF !important;
+    }
+    .st-f3 {
+        background-color: #1E1E1E !important;
+        color: #FFFFFF !important;
+    }
+    .st-iq {
+        background-color: #333333 !important;
+        color: #FFFFFF !important;
+    }
+    .st-ko {
+        background-color: #444444 !important;
+        color: #FFFFFF !important;
+    }
+    .st-ki {
+        background-color: #333333 !important;
+        color: #FFFFFF !important;
+    }
+    .st-le {
+        background-color: #333333 !important;
+        color: #FFFFFF !important;
+    }
+    .st-cu {
+        background-color: #444444 !important;
+        color: #FFFFFF !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # App title
-st.set_page_config(page_title="🦙💬 Llama 2 Chatbot")
+st.set_page_config(page_title="💬Coal Chatbot")
 
 # Replicate Credentials
 with st.sidebar:
@@ -13,7 +66,7 @@ with st.sidebar:
         replicate_api = st.secrets['REPLICATE_API_TOKEN']
     else:
         replicate_api = st.text_input('Enter Replicate API token:', type='password')
-        if not (replicate_api.startswith('r8_') and len(replicate_api)==40):
+        if not (replicate_api.startswith('r8_') and len(replicate_api) == 40):
             st.warning('Please enter your credentials!', icon='⚠️')
         else:
             st.success('Proceed to entering your prompt message!', icon='👉')
@@ -36,8 +89,14 @@ if "messages" not in st.session_state.keys():
 
 # Display or clear chat messages
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
+    if message["role"] == "assistant":
+        with st.container():
+            st.image("assistant_icon.png", use_column_width=False)
+            st.write(message["content"])
+    else:
+        with st.container():
+            st.image("user_icon.png", use_column_width=False)
+            st.write(message["content"])
 
 def clear_chat_history():
     st.session_state.messages = [{"role": "assistant", "content": "How may I assist you today?"}]
@@ -53,25 +112,18 @@ def generate_llama2_response(prompt_input):
             string_dialogue += "Assistant: " + dict_message["content"] + "\n\n"
     output = replicate.run('a16z-infra/llama13b-v2-chat:df7690f1994d94e96ad9d568eac121aecf50684a0b0963b25a41cc40061269e5', 
                            input={"prompt": f"{string_dialogue} {prompt_input} Assistant: ",
-                                  "temperature":temperature, "top_p":top_p, "max_length":max_length, "repetition_penalty":1})
+                                  "temperature": temperature, "top_p": top_p, "max_length": max_length, "repetition_penalty": 1})
     return output
 
 # User-provided prompt
-if prompt := st.chat_input(disabled=not replicate_api):
+if prompt := st.text_area("Type your message..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.write(prompt)
 
 # Generate a new response if last message is not from assistant
 if st.session_state.messages[-1]["role"] != "assistant":
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            response = generate_llama2_response(prompt)
-            placeholder = st.empty()
-            full_response = ''
-            for item in response:
-                full_response += item
-                placeholder.markdown(full_response)
-            placeholder.markdown(full_response)
-    message = {"role": "assistant", "content": full_response}
+    with st.spinner("Thinking..."):
+        response = generate_llama2_response(prompt)
+    message = {"role": "assistant", "content": response[0]}
     st.session_state.messages.append(message)
+
+
